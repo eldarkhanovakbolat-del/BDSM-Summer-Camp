@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """启动前导入 Wiki 词条缓存到 SQLite。优先读本地文件，找不到则从网络下载。"""
-import json, sqlite3, os, time, urllib.request
+import json, sqlite3, os, time, ssl, urllib.request
 from pathlib import Path
 
 db_path = os.environ.get("CAMP_DB_PATH", "./data/camp.db")
@@ -19,8 +19,11 @@ if local_cache.exists():
 if cache is None:
     print(f"[prestart] Local file not found, downloading from {cache_url} ...")
     try:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
         req = urllib.request.Request(cache_url, headers={"User-Agent": "BDSMCache/1.0"})
-        with urllib.request.urlopen(req, timeout=60) as r:
+        with urllib.request.urlopen(req, timeout=60, context=ctx) as r:
             cache = json.loads(r.read().decode("utf-8"))
         print(f"[prestart] Downloaded cache: {len(cache)} topics")
     except Exception as e:
