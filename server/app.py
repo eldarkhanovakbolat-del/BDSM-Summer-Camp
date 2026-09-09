@@ -329,6 +329,9 @@ class WikiClient:
             stale = self.store.topic_any_age(title)
             if stale:
                 return stale
+            fallback = self._catalog_fallback(title)
+            if fallback:
+                return fallback
             raise RuntimeError("暂时无法读取 BDSM Wiki 原词条，请稍后再试")
 
     def catalog(self) -> dict[str, Any]:
@@ -340,7 +343,23 @@ class WikiClient:
             raise ValueError("invalid wiki catalog")
         self._catalog = payload
         return payload
-
+    def _catalog_fallback(self, title: str) -> dict[str, Any] | None:
+        try:
+            catalog = self.catalog()
+            for section in catalog.get("sections", []):
+                for topic in section.get("topics", []):
+                    if topic.get("title", "").lower() == title.lower():
+                        desc = topic.get("description") or topic.get("title", "")
+                        return {
+                            "title": topic["title"],
+                            "description": desc,
+                            "source_url": topic.get("source_url", ""),
+                            "content": desc,
+                            "revision": "catalog",
+                        }
+        except Exception:
+            pass
+        return None
 
 class CampAI:
     def __init__(
