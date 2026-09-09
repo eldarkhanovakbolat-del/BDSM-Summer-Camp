@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import socket
+import ssl
 import threading
 from abc import ABC, abstractmethod
 from http import HTTPStatus
@@ -119,7 +120,7 @@ class OpenAICompatibleProvider(AIProvider):
             method="POST",
         )
         try:
-            with self._semaphore, urlopen(request, timeout=self.timeout) as response:
+            with self._semaphore, urlopen(request, timeout=self.timeout, context=ssl._create_unverified_context()) as response:
                 payload = json.loads(response.read(4_000_000).decode("utf-8"))
         except HTTPError as exc:
             if exc.code in {HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN}:
